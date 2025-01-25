@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pain color</title>
+<style>
+    body { display: flex; flex-direction: column; align-items: center; }
+    #gameCanvas { border: 1px solid black; margin-top: 10px; }
+    #controls { display: flex; flex-direction: column; align-items: center; }
+    .control { margin: 5px; }
+</style>
+</head>
+<body>
+
+<h1>color picture</h1>
+<div id="controls">
+    <div class="control">
+        <label for="colorPicker">Оберіть колір: </label>
+        <input type="color" id="colorPicker" value="#000000">
+    </div>
+    <div class="control">
+        <label for="blockSize">Розмір сітки: </label>
+        <input type="range" id="blockSize" min="10" max="100" value="50" step="10">
+    </div>
+    <div class="control">
+        <button id="eraseMode">Ластик: Вимкнено</button>
+    </div>
+    <div class="control">
+        <button id="undo">Скасувати останнє</button>
+    </div>
+    <div class="control">
+        <button id="clearAll">Очистити все</button>
+    </div>
+</div>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let blockSize = Number(document.getElementById('blockSize').value);
+    let blockColor = document.getElementById('colorPicker').value;
+    let isEraseMode = false;
+    let isDrawing = false;
+
+    let blocks = JSON.parse(localStorage.getItem('blocks')) || [];
+    let gridSize = Number(localStorage.getItem('gridSize')) || blockSize;
+
+    function drawGrid() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < canvas.width; i += gridSize) {
+            for (let j = 0; j < canvas.height; j += gridSize) {
+                ctx.strokeRect(i, j, gridSize, gridSize);
+            }
+        }
+        
+        blocks.forEach(block => {
+            ctx.fillStyle = block.color;
+            ctx.fillRect(block.x, block.y, gridSize, gridSize);
+        });
+    }
+
+    canvas.addEventListener('mousedown', function(event) {
+        isDrawing = true;
+        handleDrawErase(event);
+    });
+
+    canvas.addEventListener('mouseup', function() {
+        isDrawing = false;
+    });
+
+    canvas.addEventListener('mousemove', function(event) {
+        if (isDrawing) {
+            handleDrawErase(event);
+        }
+    });
+
+    function handleDrawErase(event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const blockX = Math.floor(x / gridSize) * gridSize;
+        const blockY = Math.floor(y / gridSize) * gridSize;
+
+        if (isEraseMode) {
+            blocks = blocks.filter(block => !(block.x === blockX && block.y === blockY));
+        } else {
+            blocks.push({ x: blockX, y: blockY, color: blockColor });
+        }
+        
+        localStorage.setItem('blocks', JSON.stringify(blocks));
+        drawGrid();
+    }
+
+    document.getElementById('colorPicker').addEventListener('input', function() {
+        blockColor = this.value;
+    });
+
+    document.getElementById('blockSize').addEventListener('input', function() {
+        gridSize = Number(this.value);
+        localStorage.setItem('gridSize', gridSize);
+        drawGrid();
+    });
+
+    document.getElementById('eraseMode').addEventListener('click', function() {
+        isEraseMode = !isEraseMode;
+        this.textContent = `Ластик: ${isEraseMode ? 'Ввiмкнено' : 'Вимкнено'}`;
+    });
+
+    document.getElementById('undo').addEventListener('click', function() {
+        blocks.pop();
+        localStorage.setItem('blocks', JSON.stringify(blocks));
+        drawGrid();
+    });
+
+    document.getElementById('clearAll').addEventListener('click', function() {
+        blocks = [];
+        localStorage.setItem('blocks', JSON.stringify(blocks));
+        drawGrid();
+    });
+
+    drawGrid();
+</script>
+</body>
+</html>
